@@ -185,18 +185,47 @@ export default function CotizadorCorpQualitas() {
     template = template.replace('{{primaTotal}}', cotizacion.primaTotal.toFixed(2))
 
     // Generate the PDF using jsPDF
-    const doc = new jsPDF();
-    // Set a smaller font size for the entire document
-    doc.setFontSize(10);
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
 
-    doc.html(template, {
-      callback: function (pdf) {
-        pdf.save(`${fileName}.pdf`);
-      },
-      x: 10,
-      y: 10,
-      width: 180 // Adjust the width to ensure the content fits well in the page
-    });
+    // Add header to the document
+    doc.setFontSize(12);
+    doc.text('SLIP DE COTIZACIÓN - QUALITAS CORP', 40, 40);
+    doc.setLineWidth(0.5);
+    doc.line(40, 50, 555, 50);
+
+    // Add content to the document
+    doc.setFontSize(10);
+    doc.text(`Fecha de Cotización: ${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`, 40, 70);
+    doc.text(`Número de Cotización: ${formattedDate}`, 40, 90);
+
+    // Cotización details
+    doc.text('Cotización:', 40, 120);
+    doc.text(`Contratante / Asegurado: ${formData.contratante}`, 40, 140);
+    doc.text(`DNI/RUC: ${formData.dni_ruc}`, 40, 160);
+    doc.text(`Circulación: ${formData.circulacion}`, 40, 180);
+    doc.text(`Placa: ${formData.placa}`, 40, 200);
+    doc.text(`Marca: ${formData.marca}`, 40, 220);
+    doc.text(`Modelo: ${formData.modelo}`, 40, 240);
+    doc.text(`Año: ${formData.ano}`, 40, 260);
+    doc.text(`Suma Asegurada: ${formData.sumaAsegurada}`, 40, 280);
+    doc.text(`Tasa Neta: ${(cotizacion.tasaNeta * 100).toFixed(3)}%`, 40, 300);
+    doc.text(`Prima Neta: ${cotizacion.primaNeta.toFixed(2)}`, 40, 320);
+    doc.text(`Prima Total: ${cotizacion.primaTotal.toFixed(2)}`, 40, 340);
+
+    // Add footer
+    doc.setLineWidth(0.5);
+    doc.line(40, 770, 555, 770);
+    doc.setFontSize(8);
+    doc.text('Qualitas Corp - Cotización de Seguro Vehicular', 40, 790);
+    doc.text(`Fecha de generación: ${today.toLocaleString()}`, 40, 810);
+
+    // Add a page break if needed
+    if (doc.internal.getNumberOfPages() > 1) {
+      doc.addPage();
+    }
+
+    // Save the PDF
+    doc.save(`${fileName}.pdf`);
   }
 
   const currentYear = new Date().getFullYear()
