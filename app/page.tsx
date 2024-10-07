@@ -1,5 +1,5 @@
-import { CotizadorCorpQualitasComponent } from "@/components/cotizador-corp-qualitas"
+import CotizadorCorpQualitas from "@/components/cotizador-corp-qualitas"
 
 export default function Page() {
-  return <CotizadorCorpQualitasComponent />
+  return <CotizadorCorpQualitas />
 }
