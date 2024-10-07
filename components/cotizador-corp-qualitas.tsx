@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -42,6 +43,7 @@ export default function CotizadorCorpQualitas() {
     ano: new Date().getFullYear(),
     riesgo: '',
     sumaAsegurada: '',
+    placaEnTramite: false,
   })
 
   const [marcas, setMarcas] = useState<string[]>([])
@@ -88,36 +90,51 @@ export default function CotizadorCorpQualitas() {
 
     if (name === 'contratante') {
       newValue = value.toUpperCase()
-    } else if (name === 'dni_ruc') {
-      if (value.length > 11) return
-      if (!/^\d*$/.test(value)) return
-      if (value.length === 11 && !['10', '20'].includes(value.substring(0, 2))) {
-        setError('RUC debe comenzar con 10 o 20')
-      } else if (value.length !== 8 && value.length !== 11) {
-        setError('DNI debe tener 8 dígitos o RUC debe tener 11 dígitos')
-      } else {
-        setError(null)
-      }
     }
 
     setFormData(prev => ({ ...prev, [name]: newValue }))
   }
 
+  const handleDniRucBlur = () => {
+    if (formData.dni_ruc.length === 11 && !['10', '20'].includes(formData.dni_ruc.substring(0, 2))) {
+      setError('RUC debe comenzar con 10 o 20')
+    } else if (formData.dni_ruc.length !== 8 && formData.dni_ruc.length !== 11) {
+      setError('DNI debe tener 8 dígitos o RUC debe tener 11 dígitos')
+    } else {
+      setError(null)
+    }
+  }
+
   const handlePlacaBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     let newValue = e.target.value.toUpperCase().replace(/\s/g, '')
-    if (newValue.length === 0) {
-      newValue = 'ET'
-    } else if (newValue.length > 6) {
-      newValue = newValue.slice(0, 6)
-    }
     if (newValue.length === 6) {
       newValue = `${newValue.slice(0, 3)}-${newValue.slice(3)}`
     }
+    const placaRegex = /^[A-Z0-9]{3}-[A-Z0-9]{3}$/
+
+    if (newValue && !placaRegex.test(newValue)) {
+      setError('La placa debe tener el formato correcto')
+    } else {
+      setError(null)
+    }
+
     setFormData(prev => ({ ...prev, placa: newValue }))
+  }
+
+  const handleSumaAseguradaBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value.replace(/,/g, ''))
+    if (!isNaN(value)) {
+      setFormData(prev => ({ ...prev, sumaAsegurada: value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }))
+    }
   }
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target
+    setFormData(prev => ({ ...prev, [name]: checked, placa: checked ? 'ET' : '' }))
   }
 
   const calcularCotizacion = () => {
@@ -142,11 +159,44 @@ export default function CotizadorCorpQualitas() {
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Generando PDF...')
-    // Aquí iría la lógica para generar el PDF
-    alert('PDF generado con éxito')
+    const today = new Date()
+    const formattedDate = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}${today.getHours().toString().padStart(2, '0')}${today.getMinutes().toString().padStart(2, '0')}`
+    const fileName = `Qualitas_Corp_${formattedDate}_${formData.placa}_${formData.contratante.replace(/[./\s]+/g, "")}`
+
+    // Fetch the HTML template from the public folder
+    const response = await fetch('/corporativo-plantilla.html')
+    let template = await response.text()
+
+    // Replace placeholders in the template with actual form values
+    template = template.replace('{{fecha_cotizacion}}', `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`)
+    template = template.replace('{{numero_cotizacion}}', formattedDate)
+    template = template.replace('{{contratante}}', formData.contratante)
+    template = template.replace('{{dni_ruc}}', formData.dni_ruc)
+    template = template.replace('{{circulacion}}', formData.circulacion)
+    template = template.replace('{{placa}}', formData.placa)
+    template = template.replace('{{marca}}', formData.marca)
+    template = template.replace('{{modelo}}', formData.modelo)
+    template = template.replace('{{ano}}', formData.ano.toString())
+    template = template.replace('{{sumaAsegurada}}', formData.sumaAsegurada)
+    template = template.replace('{{primaNeta}}', cotizacion.primaNeta.toFixed(2))
+    template = template.replace('{{tasaNeta}}', (cotizacion.tasaNeta * 100).toFixed(3))
+    template = template.replace('{{primaTotal}}', cotizacion.primaTotal.toFixed(2))
+
+    // Generate the PDF using jsPDF
+    const doc = new jsPDF();
+    // Set a smaller font size for the entire document
+    doc.setFontSize(10);
+
+    doc.html(template, {
+      callback: function (pdf) {
+        pdf.save(`${fileName}.pdf`);
+      },
+      x: 10,
+      y: 10,
+      width: 180 // Adjust the width to ensure the content fits well in the page
+    });
   }
 
   const currentYear = new Date().getFullYear()
@@ -167,8 +217,8 @@ export default function CotizadorCorpQualitas() {
               </div>
               <div>
                 <Label htmlFor="dni_ruc">DNI / RUC</Label>
-                <Input id="dni_ruc" name="dni_ruc" value={formData.dni_ruc} onChange={handleInputChange} required />
-                {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+                <Input id="dni_ruc" name="dni_ruc" value={formData.dni_ruc} onChange={handleInputChange} onBlur={handleDniRucBlur} required />
+                {error && error.startsWith('DNI') && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
               </div>
               <div>
                 <Label htmlFor="circulacion">CIRCULACIÓN</Label>
@@ -186,7 +236,12 @@ export default function CotizadorCorpQualitas() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="placa">PLACA</Label>
-                <Input id="placa" name="placa" value={formData.placa} onChange={handleInputChange} onBlur={handlePlacaBlur} required />
+                <Input id="placa" name="placa" value={formData.placa} onChange={handleInputChange} onBlur={handlePlacaBlur} disabled={formData.placaEnTramite} required />
+                {error && error.startsWith('La placa') && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+                <div className="flex items-center mt-2">
+                  <input type="checkbox" id="placaEnTramite" name="placaEnTramite" checked={formData.placaEnTramite} onChange={handleCheckboxChange} className="mr-2" />
+                  <Label htmlFor="placaEnTramite">Placa en trámite</Label>
+                </div>
               </div>
               <div>
                 <Label htmlFor="marca">MARCA</Label>
@@ -237,6 +292,7 @@ export default function CotizadorCorpQualitas() {
                     const value = e.target.value.replace(/[^0-9,]/g, '')
                     setFormData(prev => ({ ...prev, sumaAsegurada: value }))
                   }}
+                  onBlur={handleSumaAseguradaBlur}
                   placeholder="Ingrese la suma asegurada (ej: 10,000.00)"
                   required
                 />
@@ -252,7 +308,7 @@ export default function CotizadorCorpQualitas() {
               </div>
               <div>
                 <Label>TASA NETA</Label>
-                <Input value={cotizacion.tasaNeta.toFixed(4)} readOnly />
+                <Input value={`${(cotizacion.tasaNeta * 100).toFixed(3)}%`} readOnly />
               </div>
               <div>
                 <Label>PRIMA NETA</Label>
