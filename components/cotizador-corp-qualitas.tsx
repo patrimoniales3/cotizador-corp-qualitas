@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { jsPDF } from "jspdf";
+import { generatePDF } from '@/lib/generatePDF';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -44,6 +44,7 @@ export default function CotizadorCorpQualitas() {
     riesgo: '',
     sumaAsegurada: '',
     placaEnTramite: false,
+    autoDealer: false,
   })
 
   const [marcas, setMarcas] = useState<string[]>([])
@@ -134,7 +135,7 @@ export default function CotizadorCorpQualitas() {
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target
-    setFormData(prev => ({ ...prev, [name]: checked, placa: checked ? 'ET' : '' }))
+    setFormData(prev => ({ ...prev, [name]: checked, placa: name === 'placaEnTramite' && checked ? 'ET' : prev.placa }))
   }
 
   const calcularCotizacion = () => {
@@ -150,6 +151,9 @@ export default function CotizadorCorpQualitas() {
     const tasaNeta = tasasData[formData.circulacion as 'LIMA' | 'PROVINCIA'][formData.riesgo as 'BAJO' | 'MEDIO' | 'ALTO'][tasaIndex]
     let primaNeta = tasaNeta * parseFloat(formData.sumaAsegurada.replace(/,/g, ''))
     primaNeta = Math.max(primaNeta, 300)
+    if (formData.autoDealer) {
+      primaNeta += 90
+    }
     const primaTotal = primaNeta * 1.03 * 1.18
 
     setCotizacion({
@@ -161,71 +165,7 @@ export default function CotizadorCorpQualitas() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const today = new Date()
-    const formattedDate = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}${today.getHours().toString().padStart(2, '0')}${today.getMinutes().toString().padStart(2, '0')}`
-    const fileName = `Qualitas_Corp_${formattedDate}_${formData.placa}_${formData.contratante.replace(/[./\s]+/g, "")}`
-
-    // Fetch the HTML template from the public folder
-    const response = await fetch('/corporativo-plantilla.html')
-    let template = await response.text()
-
-    // Replace placeholders in the template with actual form values
-    template = template.replace('{{fecha_cotizacion}}', `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`)
-    template = template.replace('{{numero_cotizacion}}', formattedDate)
-    template = template.replace('{{contratante}}', formData.contratante)
-    template = template.replace('{{dni_ruc}}', formData.dni_ruc)
-    template = template.replace('{{circulacion}}', formData.circulacion)
-    template = template.replace('{{placa}}', formData.placa)
-    template = template.replace('{{marca}}', formData.marca)
-    template = template.replace('{{modelo}}', formData.modelo)
-    template = template.replace('{{ano}}', formData.ano.toString())
-    template = template.replace('{{sumaAsegurada}}', formData.sumaAsegurada)
-    template = template.replace('{{primaNeta}}', cotizacion.primaNeta.toFixed(2))
-    template = template.replace('{{tasaNeta}}', (cotizacion.tasaNeta * 100).toFixed(3))
-    template = template.replace('{{primaTotal}}', cotizacion.primaTotal.toFixed(2))
-
-    // Generate the PDF using jsPDF
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-
-    // Add header to the document
-    doc.setFontSize(12);
-    doc.text('SLIP DE COTIZACIÓN - QUALITAS CORP', 40, 40);
-    doc.setLineWidth(0.5);
-    doc.line(40, 50, 555, 50);
-
-    // Add content to the document
-    doc.setFontSize(10);
-    doc.text(`Fecha de Cotización: ${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`, 40, 70);
-    doc.text(`Número de Cotización: ${formattedDate}`, 40, 90);
-
-    // Cotización details
-    doc.text('Cotización:', 40, 120);
-    doc.text(`Contratante / Asegurado: ${formData.contratante}`, 40, 140);
-    doc.text(`DNI/RUC: ${formData.dni_ruc}`, 40, 160);
-    doc.text(`Circulación: ${formData.circulacion}`, 40, 180);
-    doc.text(`Placa: ${formData.placa}`, 40, 200);
-    doc.text(`Marca: ${formData.marca}`, 40, 220);
-    doc.text(`Modelo: ${formData.modelo}`, 40, 240);
-    doc.text(`Año: ${formData.ano}`, 40, 260);
-    doc.text(`Suma Asegurada: ${formData.sumaAsegurada}`, 40, 280);
-    doc.text(`Tasa Neta: ${(cotizacion.tasaNeta * 100).toFixed(3)}%`, 40, 300);
-    doc.text(`Prima Neta: ${cotizacion.primaNeta.toFixed(2)}`, 40, 320);
-    doc.text(`Prima Total: ${cotizacion.primaTotal.toFixed(2)}`, 40, 340);
-
-    // Add footer
-    doc.setLineWidth(0.5);
-    doc.line(40, 770, 555, 770);
-    doc.setFontSize(8);
-    doc.text('Qualitas Corp - Cotización de Seguro Vehicular', 40, 790);
-    doc.text(`Fecha de generación: ${today.toLocaleString()}`, 40, 810);
-
-    // Add a page break if needed
-    if (doc.internal.getNumberOfPages() > 1) {
-      doc.addPage();
-    }
-
-    // Save the PDF
-    doc.save(`${fileName}.pdf`);
+    generatePDF(formData, cotizacion, formData.autoDealer)
   }
 
   const currentYear = new Date().getFullYear()
@@ -310,6 +250,10 @@ export default function CotizadorCorpQualitas() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex items-center mt-2">
+                <input type="checkbox" id="autoDealer" name="autoDealer" checked={formData.autoDealer} onChange={(e) => setFormData(prev => ({ ...prev, autoDealer: e.target.checked }))} className="mr-2" />
+                <Label htmlFor="autoDealer">Auto al Dealer</Label>
               </div>
               <div>
                 <Label htmlFor="sumaAsegurada">SUMA ASEGURADA</Label>
