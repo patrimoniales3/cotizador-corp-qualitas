@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotizador Corp Qualitas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        input, select {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+
+        .cotizacion {
+            background-color: #e0e0e0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        .cotizacion h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .cotizacion-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1565c0;
+        }
+
+        .alert {
+            background-color: #f44336;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .button-container button {
+            width: calc(50% - 10px);
+        }
+
+        .modal-content {
+            width: 80%;
+            height: 80%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+        }
+
+        .modal-iframe {
+            flex-grow: 1;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 class="card-title">Cotizador Corp Qualitas</h2>
+        <form id="cotizadorForm">
+            <div class="form-grid">
+                <div>
+                    <div class="form-group">
+                        <label for="contratante">CONTRATANTE / ASEGURADO</label>
+                        <input type="text" id="contratante" name="contratante" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dni_ruc">DNI / RUC</label>
+                        <input type="text" id="dni_ruc" name="dni_ruc" required>
+                        <div id="dniRucError" class="alert" style="display: none;">
+                            <div class="alert-title">Error</div>
+                            <div class="alert-description"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="circulacion">CIRCULACIÓN</label>
+                        <select id="circulacion" name="circulacion" required>
+                            <option value="">Seleccione circulación</option>
+                            <option value="LIMA">LIMA</option>
+                            <option value="PROVINCIA">PROVINCIA</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label for="placa">PLACA</label>
+                        <input type="text" id="placa" name="placa" required>
+                        <div id="placaError" class="alert" style="display: none;">
+                            <div class="alert-title">Error</div>
+                            <div class="alert-description"></div>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="placaEnTramite" name="placaEnTramite">
+                            <label for="placaEnTramite">Placa en trámite</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="marca">MARCA</label>
+                        <select id="marca" name="marca" required>
+                            <option value="">Seleccione marca</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modelo">MODELO</label>
+                        <select id="modelo" name="modelo" required>
+                            <option value="">Seleccione modelo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ano">AÑO</label>
+                        <select id="ano" name="ano" required>
+                            <option value="">Seleccione año</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="autoDealer" name="autoDealer">
+                        <label for="autoDealer">Auto al Dealer</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="sumaAsegurada">SUMA ASEGURADA</label>
+                        <input type="text" id="sumaAsegurada" name="sumaAsegurada" placeholder="Ingrese la suma asegurada (ej: 10,000.00)" required>
+                    </div>
+                </div>
+            </div>
+            <div class="cotizacion">
+                <h3>Cotización</h3>
+                <div class="cotizacion-grid">
+                    <div class="form-group">
+                        <label for="riesgo">RIESGO</label>
+                        <input type="text" id="riesgo" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="tasaNeta">TASA NETA</label>
+                        <input type="text" id="tasaNeta" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="primaNeta">PRIMA NETA</label>
+                        <input type="text" id="primaNeta" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="primaTotal">PRIMA TOTAL</label>
+                        <input type="text" id="primaTotal" readonly>
+                    </div>
+                </div>
+            </div>
+            <button type="submit">COTIZAR</button>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // URLs de los datos
+        const vehiculosDataUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQI6kmRoIxEde-RHfZ1U0AfGC2ZubjeF-4BHbyw9Wx74ob3FFwcM3OV29X1HopLX_ncAnCAEMg3G7IQ/pub?gid=1008793461&single=true&output=csv';
+        const tasasLimaDataUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM9S_j_BZW6QnxB03uNMcbtJak39CPZ2tZKRHDehiqBFr7b6jNJdrSQ3UqpRzor5cfuMCMgDwAJ-1h/pub?gid=1732458939&single=true&output=csv';
+        const tasasProvinciaDataUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM9S_j_BZW6QnxB03uNMcbtJak39CPZ2tZKRHDehiqBFr7b6jNJdrSQ3UqpRzor5cfuMCMgDwAJ-1h/pub?gid=2015943443&single=true&output=csv';
+
+        let vehiculosData = [];
+        let tasasLimaData = {};
+        let tasasProvinciaData = {};
+
+        // Función para cargar los datos desde las URLs
+        async function fetchData(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.text();
+            } catch (error) {
+                console.error('Error al cargar los datos:', error);
+                throw error;
+            }
+        }
+
+        // Función para parsear CSV
+        function parseCsv(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',').map(header => header.trim());
+            return lines.slice(1).map(line => {
+                const cells = line.split(',');
+                return headers.reduce((obj, header, index) => {
+                    obj[header] = cells[index] ? cells[index].trim() : '';
+                    return obj;
+                }, {});
+            });
+        }
+
+        // Función para parsear la tabla CSV de tasas
+        function parseTasasCsv(csv) {
+            const lines = csv.split('\n');
+            const tasas = {};
+
+            lines.slice(1).forEach(line => {
+                const cells = line.split(',');
+                const ant = cells[0].trim();
+                tasas[ant] = {
+                    'CATEGORIA I': parseFloat(cells[1].trim().replace('%', '').replace(',', '.')) || 0,
+                    'MEDIANO RIESGO': parseFloat(cells[2].trim().replace('%', '').replace(',', '.')) || 0,
+                    'ALTO RIESGO': parseFloat(cells[3].trim().replace('%', '').replace(',', '.')) || 0,
+                    'CHINO E INDIO': parseFloat(cells[4].trim().replace('%', '').replace(',', '.')) || 0
+                };
+            });
+
+            return tasas;
+        }
+
+        // Función para cargar todos los datos
+        async function loadData() {
+            try {
+                const [vehiculosCsv, tasasLimaCsv, tasasProvinciaCsv] = await Promise.all([
+                    fetchData(vehiculosDataUrl),
+                    fetchData(tasasLimaDataUrl),
+                    fetchData(tasasProvinciaDataUrl)
+                ]);
+
+                vehiculosData = parseCsv(vehiculosCsv);
+                tasasLimaData = parseTasasCsv(tasasLimaCsv);
+                tasasProvinciaData = parseTasasCsv(tasasProvinciaCsv);
+
+                // Inicializar la aplicación después de cargar los datos
+                init();
+            } catch (error) {
+                console.error('Error al cargar los datos:', error);
+                alert('Hubo un problema al cargar los datos. Por favor, intente nuevamente más tarde.');
+            }
+        }
+
+        // Llamar a loadData al cargar la página
+        loadData();
+
+        // Elementos del DOM
+        const form = document.getElementById('cotizadorForm');
+        const contratanteInput = document.getElementById('contratante');
+        const dniRucInput = document.getElementById('dni_ruc');
+        const placaInput = document.getElementById('placa');
+        const placaEnTramiteCheckbox = document.getElementById('placaEnTramite');
+        const marcaSelect = document.getElementById('marca');
+        const modeloSelect = document.getElementById('modelo');
+        const anoSelect = document.getElementById('ano');
+        const sumaAseguradaInput = document.getElementById('sumaAsegurada');
+        const autoDealerCheckbox = document.getElementById('autoDealer');
+        const riesgoInput = document.getElementById('riesgo');
+        const tasaNetaInput = document.getElementById('tasaNeta');
+        const primaNetaInput = document.getElementById('primaNeta');
+        const primaTotalInput = document.getElementById('primaTotal');
+
+        // Inicialización
+        function init() {
+            populateMarcas();
+            populateYears();
+            setupEventListeners();
+        }
+
+        function populateMarcas() {
+            const uniqueMarcas = [...new Set(vehiculosData.map(v => v.MARCA))];
+            marcaSelect.innerHTML = '<option value="">Seleccione marca</option>';
+            uniqueMarcas.forEach(marca => {
+                const option = document.createElement('option');
+                option.value = marca;
+                option.textContent = marca;
+                marcaSelect.appendChild(option);
+            });
+        }
+
+        function populateYears() {
+            const currentYear = new Date().getFullYear();
+            anoSelect.innerHTML = '<option value="">Seleccione año</option>';
+            for (let i = 0; i <= 50; i++) {
+                const year = currentYear - i;
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                anoSelect.appendChild(option);
+            }
+        }
+
+        function setupEventListeners() {
+            contratanteInput.addEventListener('input', handleContratanteInput);
+            dniRucInput.addEventListener('blur', handleDniRucBlur);
+            placaInput.addEventListener('blur', handlePlacaBlur);
+            placaEnTramiteCheckbox.addEventListener('change', handlePlacaEnTramiteChange);
+            marcaSelect.addEventListener('change', handleMarcaChange);
+            modeloSelect.addEventListener('change', handleModeloChange);
+            sumaAseguradaInput.addEventListener('blur', handleSumaAseguradaBlur);
+            form.addEventListener('submit', handleSubmit);
+            form.addEventListener('input', calcularCotizacion);
+        }
+
+        function handleContratanteInput(e) {
+            e.target.value = e.target.value.toUpperCase();
+        }
+
+        function handleDniRucBlur() {
+            const value = dniRucInput.value;
+            const errorElement = document.getElementById('dniRucError');
+            if (value.length === 11 && !['10', '20'].includes(value.substring(0, 2))) {
+                showError(errorElement, 'RUC debe comenzar con 10 o 20');
+            } else if (value.length !== 8 && value.length !== 11) {
+                showError(errorElement, 'DNI debe tener 8 dígitos o RUC debe tener 11 dígitos');
+            } else {
+                hideError(errorElement);
+            }
+        }
+
+        function handlePlacaBlur() {
+            let newValue = placaInput.value.toUpperCase().replace(/\s/g, '');
+            if (newValue.length === 6) {
+                newValue = `${newValue.slice(0, 3)}-${newValue.slice(3)}`;
+            }
+            const placaRegex = /^[A-Z0-9]{3}-[A-Z0-9]{3}$/;
+            const errorElement = document.getElementById('placaError');
+
+            if (newValue && !placaRegex.test(newValue)) {
+                showError(errorElement, 'La placa debe tener el formato correcto');
+            } else {
+                hideError(errorElement);
+            }
+
+            placaInput.value = newValue;
+        }
+
+        function handlePlacaEnTramiteChange() {
+            placaInput.disabled = placaEnTramiteCheckbox.checked;
+            if (placaEnTramiteCheckbox.checked) {
+                placaInput.value = 'ET';
+            } else {
+                placaInput.value = '';
+            }
+        }
+
+        function handleMarcaChange() {
+            modeloSelect.innerHTML = '<option value="">Seleccione modelo</option>';
+            const selectedMarca = marcaSelect.value;
+            const modelosFiltrados = vehiculosData.filter(v => v.MARCA === selectedMarca);
+            modelosFiltrados.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v.MODELO;
+                option.textContent = v.MODELO;
+                modeloSelect.appendChild(option);
+            });
+        }
+
+        function handleModeloChange() {
+            const selectedMarca = marcaSelect.value;
+            const selectedModelo = modeloSelect.value;
+            const vehiculo = vehiculosData.find(v => v.MARCA === selectedMarca && v.MODELO === selectedModelo);
+            if (vehiculo) {
+                riesgoInput.value = vehiculo.RIESGO;
+            }
+        }
+
+        function handleSumaAseguradaBlur() {
+            const value = parseFloat(sumaAseguradaInput.value.replace(/,/g, ''));
+            if (!isNaN(value)) {
+                sumaAseguradaInput.value = value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+        }
+
+        function calcularCotizacion() {
+            const circulacion = document.getElementById('circulacion').value;
+            const riesgo = riesgoInput.value;
+            const ano = parseInt(anoSelect.value);
+            const sumaAsegurada = parseFloat(sumaAseguradaInput.value.replace(/,/g, ''));
+
+            if (!circulacion || !riesgo || isNaN(ano) || isNaN(sumaAsegurada)) return;
+
+            const currentYear = new Date().getFullYear();
+            let antiguedad = currentYear - ano;
+            
+            const tasasData = circulacion === 'LIMA' ? tasasLimaData : tasasProvinciaData;
+            
+            const maxAntiguedad = Math.max(...Object.keys(tasasData).map(Number));
+            if (antiguedad > maxAntiguedad) {
+                antiguedad = maxAntiguedad;
+            }
+            
+            const tasaNeta = tasasData[antiguedad][riesgo];
+            let primaNeta = tasaNeta * sumaAsegurada / 100;
+            primaNeta = Math.max(primaNeta, 300);
+            if (autoDealerCheckbox.checked) {
+                primaNeta += 90;
+            }
+            const primaTotal = primaNeta * 1.03 * 1.18;
+
+            tasaNetaInput.value = `${tasaNeta.toFixed(3)}%`;
+            primaNetaInput.value = primaNeta.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            primaTotalInput.value = primaTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            try {
+                const formData = {
+                    contratante: document.getElementById('contratante').value,
+                    dni_ruc: document.getElementById('dni_ruc').value,
+                    circulacion: document.getElementById('circulacion').value,
+                    placa: document.getElementById('placa').value,
+                    marca: marcaSelect.value,
+                    modelo: modeloSelect.value,
+                    ano: anoSelect.value,
+                    sumaAsegurada: parseFloat(sumaAseguradaInput.value.replace(/,/g, '')),
+                };
+
+
+                const cotizacion = {
+                    primaNeta: parseFloat(primaNetaInput.value.replace(/,/g, '')),
+                    primaTotal: parseFloat(primaTotalInput.value.replace(/,/g, '')),
+                };
+
+                const autoDealer = autoDealerCheckbox.checked;
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // Generar nombre del archivo
+                const now = new Date();
+                const timestamp = now.getFullYear().toString().substr(-2) +
+                                  (now.getMonth() + 1).toString().padStart(2, '0') +
+                                  now.getDate().toString().padStart(2, '0') +
+                                  now.getHours().toString().padStart(2, '0') +
+                                  now.getMinutes().toString().padStart(2, '0');
+                const placa = formData.placa.replace(/[^a-zA-Z0-9]/g, '');
+                const cliente = formData.contratante.replace(/[./()\s]+$/, '').replace(/[./()]/g, '');
+                const fileName = `Qualitas Corp ${timestamp} ${placa} ${cliente}.pdf`;
+
+                // Crear tabla básica
+                doc.setFontSize(18);
+                doc.text('SLIP DE COTIZACIÓN - QUALITAS CORP', 20, 20);
+                doc.setFontSize(12);
+                doc.setLineWidth(0.1);
+                
+                let y = 40;
+                const addRow = (label, value) => {
+                    doc.line(20, y, 190, y);
+                    doc.text(label, 25, y + 10);
+                    doc.text(value, 100, y + 10);
+                    y += 15;
+                };
+
+
+                addRow('Contratante:', formData.contratante);
+                addRow('DNI/RUC:', formData.dni_ruc);
+                addRow('Placa:', formData.placa);
+                addRow('Marca:', formData.marca);
+                addRow('Modelo:', formData.modelo);
+                addRow('Año:', formData.ano);
+                addRow('Suma Asegurada:', `${formData.sumaAsegurada.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                addRow('Prima Total:', `${cotizacion.primaTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+                doc.line(20, y, 190, y);
+
+                // Generar el PDF y obtener la URL
+                const pdfBlob = doc.output('blob');
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+
+                // Crear un modal para previsualización
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                modal.style.display = 'flex';
+                modal.style.justifyContent = 'center';
+                modal.style.alignItems = 'center';
+                modal.style.zIndex = '1000';
+
+                const modalContent = document.createElement('div');
+                modalContent.className = 'modal-content';
+                modalContent.style.backgroundColor = 'white';
+                modalContent.style.borderRadius = '10px';
+                modalContent.style.overflow = 'hidden';
+                modalContent.style.width = '80%';
+                modalContent.style.height = '80%';
+                modalContent.style.display = 'flex';
+                modalContent.style.flexDirection = 'column';
+
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'modal-buttons';
+                buttonContainer.style.padding = '10px';
+                buttonContainer.style.display = 'flex';
+                buttonContainer.style.justifyContent = 'flex-end';
+                buttonContainer.style.gap = '10px';
+
+                const closeButton = document.createElement('button');
+                closeButton.textContent = 'Cerrar';
+                closeButton.style.padding = '5px 10px';
+                closeButton.onclick = () => {
+                    modal.remove();
+                    URL.revokeObjectURL(pdfUrl);
+                };
+
+                const downloadButton = document.createElement('button');
+                downloadButton.textContent = 'Descargar';
+                downloadButton.style.padding = '5px 10px';
+                downloadButton.onclick = () => {
+                    const link = document.createElement('a');
+                    link.href = pdfUrl;
+                    link.download = fileName;
+                    link.click();
+                };
+
+
+                buttonContainer.appendChild(closeButton);
+                buttonContainer.appendChild(downloadButton);
+
+                const iframe = document.createElement('iframe');
+                iframe.className = 'modal-iframe';
+                iframe.src = pdfUrl;
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+
+                modalContent.appendChild(buttonContainer);
+                modalContent.appendChild(iframe);
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+
+            } catch (error) {
+                console.error('Error:', error);
+                const errorElement = document.getElementById('error-message');
+                if (errorElement) {
+                    showError(errorElement, 'Hubo un error al generar el PDF. Por favor, inténtelo de nuevo.');
+                } else {
+                    console.error('Elemento de error no encontrado');
+                }
+            }
+        }
+
+        function showError(element, message) {
+            element.style.display = 'block';
+            element.querySelector('.alert-description').textContent = message;
+        }
+
+        function hideError(element) {
+            element.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
