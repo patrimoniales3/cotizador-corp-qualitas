@@ -1,0 +1,147 @@
+// Este código requiere que se ejecute en un entorno de navegador con acceso a internet
+// Se debe incluir una librería como PapaParse para parsear los CSV desde Google Sheets
+// Puedes añadir PapaParse con <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
+async function fetchSheetData(sheetUrl) {
+  try {
+    const response = await fetch(sheetUrl);
+    if (!response.ok) throw new Error('Error al obtener los datos de la hoja');
+    const text = await response.text();
+    return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+  } catch (error) {
+    console.error('Error:', error);
+    return [];
+  }
+}
+
+// URLs de las hojas de cálculo de Google Sheets en formato CSV
+const tasasLimaUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM9S_j_BZW6QnxB03uNMcbtJak39CPZ2tZKRHDehiqBFr7b6jNJdrSQ3UqpRzor5cfuMCMgDwAJ-1h/pub?gid=1732458939';
+const tasasProvinciaUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM9S_j_BZW6QnxB03uNMcbtJak39CPZ2tZKRHDehiqBFr7b6jNJdrSQ3UqpRzor5cfuMCMgDwAJ-1h/pub?gid=2015943443';
+const vehiculosUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQI6kmRoIxEde-RHfZ1U0AfGC2ZubjeF-4BHbyw9Wx74ob3FFwcM3OV29X1HopLX_ncAnCAEMg3G7IQ/pub?gid=1008793461';
+
+// HTML con Material Design básico para la página
+const html = `
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <div class="container">
+    <h4 class="center-align">Selector de Vehículos y Tasas</h4>
+    <div class="input-field">
+      <select id="marca" class="browser-default">
+        <option value="">Seleccione una marca</option>
+      </select>
+      <label for="marca">Marca:</label>
+    </div>
+    <div class="input-field">
+      <select id="modelo" class="browser-default">
+        <option value="">Seleccione un modelo</option>
+      </select>
+      <label for="modelo">Modelo:</label>
+    </div>
+    <div class="input-field">
+      <select id="riesgo" class="browser-default">
+        <option value="">Seleccione un riesgo</option>
+      </select>
+      <label for="riesgo">Riesgo:</label>
+    </div>
+    <div class="input-field">
+      <select id="antiguedad" class="browser-default">
+        <option value="">Seleccione una antigüedad</option>
+      </select>
+      <label for="antiguedad">Antigüedad:</label>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+`;
+
+document.body.innerHTML = html;
+
+async function init() {
+  // Obtener datos de las hojas
+  const tasasLima = await fetchSheetData(tasasLimaUrl);
+  const tasasProvincia = await fetchSheetData(tasasProvinciaUrl);
+  const vehiculos = await fetchSheetData(vehiculosUrl);
+
+  if (tasasLima.length === 0 && tasasProvincia.length === 0 && vehiculos.length === 0) {
+    console.error('No se pudieron cargar los datos de las hojas.');
+    return;
+  }
+
+  // Verificar si hay datos en la hoja de vehículos
+  if (vehiculos.length === 0) {
+    console.error('No se encontraron datos en la hoja de vehículos.');
+    return;
+  }
+
+  // Obtener marcas y modelos únicos
+  const marcasModelos = {};
+  vehiculos.forEach((vehiculo) => {
+    if (vehiculo['MARCA'] && vehiculo['MODELO']) {
+      const marca = vehiculo['MARCA'].trim();
+      const modelo = vehiculo['MODELO'].trim();
+      if (!marcasModelos[marca]) {
+        marcasModelos[marca] = new Set();
+      }
+      marcasModelos[marca].add(modelo);
+    }
+  });
+
+  // Obtener riesgos y antigüedades únicas
+  const riesgos = new Set();
+  const antiguedades = new Set();
+  [...tasasLima, ...tasasProvincia].forEach((tasa) => {
+    if (tasa['CATEGORIA I']) {  // Corregir el nombre del campo de riesgo a 'CATEGORIA I'
+      riesgos.add(tasa['CATEGORIA I'].trim());
+    }
+    if (tasa['ANT']) {
+      antiguedades.add(tasa['ANT'].trim());
+    }
+  });
+
+  // Llenar los selects en el HTML
+  const marcaSelect = document.getElementById('marca');
+  const modeloSelect = document.getElementById('modelo');
+  const riesgoSelect = document.getElementById('riesgo');
+  const antiguedadSelect = document.getElementById('antiguedad');
+
+  // Agregar opciones al select de marca
+  Object.keys(marcasModelos).forEach((marca) => {
+    const option = document.createElement('option');
+    option.value = marca;
+    option.textContent = marca;
+    marcaSelect.appendChild(option);
+  });
+
+  // Evento para actualizar los modelos cuando se seleccione una marca
+  marcaSelect.addEventListener('change', (event) => {
+    const marcaSeleccionada = event.target.value;
+    modeloSelect.innerHTML = '<option value="">Seleccione un modelo</option>';
+    if (marcasModelos[marcaSeleccionada]) {
+      marcasModelos[marcaSeleccionada].forEach((modelo) => {
+        const option = document.createElement('option');
+        option.value = modelo;
+        option.textContent = modelo;
+        modeloSelect.appendChild(option);
+      });
+    }
+  });
+
+  // Agregar opciones al select de riesgo
+  riesgos.forEach((riesgo) => {
+    const option = document.createElement('option');
+    option.value = riesgo;
+    option.textContent = riesgo;
+    riesgoSelect.appendChild(option);
+  });
+
+  // Agregar opciones al select de antigüedad
+  antiguedades.forEach((antiguedad) => {
+    const option = document.createElement('option');
+    option.value = antiguedad;
+    option.textContent = antiguedad;
+    antiguedadSelect.appendChild(option);
+  });
+}
+
+// Asegurarse de que el DOM esté completamente cargado antes de iniciar la función init
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+});

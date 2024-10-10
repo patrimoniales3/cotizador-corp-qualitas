@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import PDFPreviewModal from './pdf-preview-modal';
 
 // Simulación de datos
 const vehiculosData = [
@@ -55,6 +56,8 @@ export default function CotizadorCorpQualitas() {
     primaNeta: 0,
     primaTotal: 0,
   })
+
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; fileName: string } | null>(null)
 
   useEffect(() => {
     const uniqueMarcas = Array.from(new Set(vehiculosData.map(v => v.marca)))
@@ -165,137 +168,169 @@ export default function CotizadorCorpQualitas() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    generatePDF(formData, cotizacion, formData.autoDealer)
+    try {
+      const pdfBlob = await generatePDF(formData, cotizacion, formData.autoDealer)
+      const pdfUrl = URL.createObjectURL(pdfBlob)
+      
+      // Generar nombre del archivo
+      const now = new Date()
+      const timestamp = now.getFullYear().toString().substr(-2) +
+                        (now.getMonth() + 1).toString().padStart(2, '0') +
+                        now.getDate().toString().padStart(2, '0') +
+                        now.getHours().toString().padStart(2, '0') +
+                        now.getMinutes().toString().padStart(2, '0')
+      const placa = formData.placa.replace(/[^a-zA-Z0-9]/g, '')
+      const cliente = formData.contratante.replace(/[./()\s]+$/, '').replace(/[./()]/g, '')
+      const fileName = `Qualitas Corp ${timestamp} ${placa} ${cliente}.pdf`
+      
+      setPdfPreview({ url: pdfUrl, fileName })
+    } catch (error) {
+      console.error('Error al generar el PDF:', error)
+      // Manejar el error aquí (por ejemplo, mostrar un mensaje al usuario)
+    }
   }
 
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 51 }, (_, i) => currentYear - i)
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>Cotizador Corp Qualitas</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="contratante">CONTRATANTE / ASEGURADO</Label>
-                <Input id="contratante" name="contratante" value={formData.contratante} onChange={handleInputChange} required />
-              </div>
-              <div>
-                <Label htmlFor="dni_ruc">DNI / RUC</Label>
-                <Input id="dni_ruc" name="dni_ruc" value={formData.dni_ruc} onChange={handleInputChange} onBlur={handleDniRucBlur} required />
-                {error && error.startsWith('DNI') && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-              </div>
-              <div>
-                <Label htmlFor="circulacion">CIRCULACIÓN</Label>
-                <Select name="circulacion" onValueChange={(value) => handleSelectChange('circulacion', value)} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione circulación" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LIMA">LIMA</SelectItem>
-                    <SelectItem value="PROVINCIA">PROVINCIA</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="placa">PLACA</Label>
-                <Input id="placa" name="placa" value={formData.placa} onChange={handleInputChange} onBlur={handlePlacaBlur} disabled={formData.placaEnTramite} required />
-                {error && error.startsWith('La placa') && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-                <div className="flex items-center mt-2">
-                  <input type="checkbox" id="placaEnTramite" name="placaEnTramite" checked={formData.placaEnTramite} onChange={handleCheckboxChange} className="mr-2" />
-                  <Label htmlFor="placaEnTramite">Placa en trámite</Label>
+    <>
+      <Card className="w-full max-w-5xl mx-auto">
+        <CardHeader>
+          <CardTitle>Cotizador Corp Qualitas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="contratante">CONTRATANTE / ASEGURADO</Label>
+                  <Input id="contratante" name="contratante" value={formData.contratante} onChange={handleInputChange} required className="mt-1" />
+                </div>
+                <div>
+                  <Label htmlFor="dni_ruc">DNI / RUC</Label>
+                  <Input id="dni_ruc" name="dni_ruc" value={formData.dni_ruc} onChange={handleInputChange} onBlur={handleDniRucBlur} required className="mt-1" />
+                  {error && error.startsWith('DNI') && <Alert variant="destructive" className="mt-2"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+                </div>
+                <div>
+                  <Label htmlFor="circulacion">CIRCULACIÓN</Label>
+                  <Select name="circulacion" onValueChange={(value) => handleSelectChange('circulacion', value)} required>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Seleccione circulación" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="LIMA">LIMA</SelectItem>
+                      <SelectItem value="PROVINCIA">PROVINCIA</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <div>
-                <Label htmlFor="marca">MARCA</Label>
-                <Select name="marca" onValueChange={(value) => handleSelectChange('marca', value)} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione marca" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {marcas.map(marca => (
-                      <SelectItem key={marca} value={marca}>{marca}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="modelo">MODELO</Label>
-                <Select name="modelo" onValueChange={(value) => handleSelectChange('modelo', value)} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione modelo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {modelos.map(modelo => (
-                      <SelectItem key={modelo} value={modelo}>{modelo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="ano">AÑO</Label>
-                <Select name="ano" onValueChange={(value) => handleSelectChange('ano', value)} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione año" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map(year => (
-                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center mt-2">
-                <input type="checkbox" id="autoDealer" name="autoDealer" checked={formData.autoDealer} onChange={(e) => setFormData(prev => ({ ...prev, autoDealer: e.target.checked }))} className="mr-2" />
-                <Label htmlFor="autoDealer">Auto al Dealer</Label>
-              </div>
-              <div>
-                <Label htmlFor="sumaAsegurada">SUMA ASEGURADA</Label>
-                <Input
-                  id="sumaAsegurada"
-                  name="sumaAsegurada"
-                  value={formData.sumaAsegurada}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9,]/g, '')
-                    setFormData(prev => ({ ...prev, sumaAsegurada: value }))
-                  }}
-                  onBlur={handleSumaAseguradaBlur}
-                  placeholder="Ingrese la suma asegurada (ej: 10,000.00)"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-          <div className="bg-gray-100 p-4 rounded-md">
-            <h3 className="text-lg font-semibold mb-2">Cotización</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>RIESGO</Label>
-                <Input value={formData.riesgo} readOnly />
-              </div>
-              <div>
-                <Label>TASA NETA</Label>
-                <Input value={`${(cotizacion.tasaNeta * 100).toFixed(3)}%`} readOnly />
-              </div>
-              <div>
-                <Label>PRIMA NETA</Label>
-                <Input value={cotizacion.primaNeta.toFixed(2)} readOnly />
-              </div>
-              <div>
-                <Label>PRIMA TOTAL</Label>
-                <Input value={cotizacion.primaTotal.toFixed(2)} readOnly />
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="placa">PLACA</Label>
+                  <Input id="placa" name="placa" value={formData.placa} onChange={handleInputChange} onBlur={handlePlacaBlur} disabled={formData.placaEnTramite} required className="mt-1" />
+                  {error && error.startsWith('La placa') && <Alert variant="destructive" className="mt-2"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+                  <div className="flex items-center mt-2">
+                    <input type="checkbox" id="placaEnTramite" name="placaEnTramite" checked={formData.placaEnTramite} onChange={handleCheckboxChange} className="mr-2" />
+                    <Label htmlFor="placaEnTramite">Placa en trámite</Label>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="marca">MARCA</Label>
+                  <Select name="marca" onValueChange={(value) => handleSelectChange('marca', value)} required>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Seleccione marca" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {marcas.map(marca => (
+                        <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="modelo">MODELO</Label>
+                  <Select name="modelo" onValueChange={(value) => handleSelectChange('modelo', value)} required>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Seleccione modelo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {modelos.map(modelo => (
+                        <SelectItem key={modelo} value={modelo}>{modelo}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="ano">AÑO</Label>
+                  <Select name="ano" onValueChange={(value) => handleSelectChange('ano', value)} required>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Seleccione año" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {years.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center mt-2">
+                  <input type="checkbox" id="autoDealer" name="autoDealer" checked={formData.autoDealer} onChange={(e) => setFormData(prev => ({ ...prev, autoDealer: e.target.checked }))} className="mr-2" />
+                  <Label htmlFor="autoDealer">Auto al Dealer</Label>
+                </div>
+                <div>
+                  <Label htmlFor="sumaAsegurada">SUMA ASEGURADA</Label>
+                  <Input
+                    id="sumaAsegurada"
+                    name="sumaAsegurada"
+                    value={formData.sumaAsegurada}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9,]/g, '')
+                      setFormData(prev => ({ ...prev, sumaAsegurada: value }))
+                    }}
+                    onBlur={handleSumaAseguradaBlur}
+                    placeholder="Ingrese la suma asegurada (ej: 10,000.00)"
+                    required
+                    className="mt-1"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          <Button type="submit" className="w-full">ENVIAR</Button>
-        </form>
-      </CardContent>
-    </Card>
+            <div className="bg-gray-100 p-4 rounded-md mt-6">
+              <h3 className="text-lg font-semibold mb-2">Cotización</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>RIESGO</Label>
+                  <Input value={formData.riesgo} readOnly className="mt-1" />
+                </div>
+                <div>
+                  <Label>TASA NETA</Label>
+                  <Input value={`${(cotizacion.tasaNeta * 100).toFixed(3)}%`} readOnly className="mt-1" />
+                </div>
+                <div>
+                  <Label>PRIMA NETA</Label>
+                  <Input value={cotizacion.primaNeta.toFixed(2)} readOnly className="mt-1" />
+                </div>
+                <div>
+                  <Label>PRIMA TOTAL</Label>
+                  <Input value={cotizacion.primaTotal.toFixed(2)} readOnly className="mt-1" />
+                </div>
+              </div>
+            </div>
+            <Button type="submit" className="w-full mt-6">ENVIAR</Button>
+          </form>
+        </CardContent>
+      </Card>
+      {pdfPreview && (
+        <PDFPreviewModal
+          pdfUrl={pdfPreview.url}
+          fileName={pdfPreview.fileName}
+          onClose={() => {
+            URL.revokeObjectURL(pdfPreview.url)
+            setPdfPreview(null)
+          }}
+        />
+      )}
+    </>
   )
 }
